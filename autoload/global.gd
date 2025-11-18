@@ -40,6 +40,16 @@ const ECONOMY_CONFIG = {
 	"shop_price_increase_cap": 1.9,
 }
 
+const DIFFICULTY_CONFIG = {
+	"player_health_base_multiplier": 0.8,
+	"player_health_growth_per_wave": 0.08,
+	"player_health_flat_bonus_per_wave": 1.5,
+	"player_health_max_multiplier": 2.5,
+	"enemy_damage_base_multiplier": 1.0,
+	"enemy_damage_wave_growth": 0.15,
+	"enemy_damage_max_multiplier": 4.0,
+}
+
 const TIER_COLORS: Dictionary[UpgradeTier, Color] = {
 	UpgradeTier.RARE: Color(0.0, 0.557, 0.741),
 	UpgradeTier.EPIC: Color(0.478, 0.251, 0.71),
@@ -78,6 +88,8 @@ func get_harvesting_coins() -> void:
 func get_selected_player() -> Player:
 	var player_path: PackedScene = available_players[main_player_selected.name]
 	var player_instance := player_path.instantiate()
+	ensure_stats_baseline(player_instance.stats)
+	player_instance.stats.health = get_player_health_for_wave(player_instance.stats, 1)
 	player = player_instance
 	return player
 
@@ -222,3 +234,37 @@ func get_coin_drop_for_wave(base_value: int, wave: int) -> int:
 	)
 	var adjusted_value := int(round(float(base_value) * multiplier))
 	return max(1, adjusted_value)
+
+
+func ensure_stats_baseline(stats: UnitStats) -> void:
+	if not stats:
+		return
+	if not stats.has_meta("_base_health"):
+		stats.set_meta("_base_health", stats.health)
+	if not stats.has_meta("_base_damage"):
+		stats.set_meta("_base_damage", stats.damage)
+
+
+func get_player_health_for_wave(stats: UnitStats, wave: int) -> float:
+	ensure_stats_baseline(stats)
+	var base_health: float = float(stats.get_meta("_base_health"))
+	var safe_wave: int = max(1, wave)
+	var multiplier: float = DIFFICULTY_CONFIG.player_health_base_multiplier + float(safe_wave - 1) * DIFFICULTY_CONFIG.player_health_growth_per_wave
+	multiplier = clamp(multiplier, DIFFICULTY_CONFIG.player_health_base_multiplier, DIFFICULTY_CONFIG.player_health_max_multiplier)
+	var flat_bonus: float = float(safe_wave - 1) * DIFFICULTY_CONFIG.player_health_flat_bonus_per_wave
+	return max(1.0, base_health * multiplier + flat_bonus)
+
+
+func get_enemy_damage_for_wave(stats: UnitStats, wave: int) -> float:
+	ensure_stats_baseline(stats)
+	var base_damage: float = float(stats.get_meta("_base_damage"))
+	var safe_wave: int = max(1, wave)
+	var multiplier: float = DIFFICULTY_CONFIG.enemy_damage_base_multiplier + float(safe_wave - 1) * DIFFICULTY_CONFIG.enemy_damage_wave_growth
+	multiplier = min(multiplier, DIFFICULTY_CONFIG.enemy_damage_max_multiplier)
+	return max(1.0, base_damage * multiplier)
+
+
+func apply_enemy_wave_scaling(stats: UnitStats, wave: int) -> void:
+	if not stats:
+		return
+	stats.damage = get_enemy_damage_for_wave(stats, wave)

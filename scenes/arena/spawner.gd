@@ -19,6 +19,12 @@ var wave_timer_remaining := 0.0
 var spawn_timer_remaining := 0.0
 var spawn_timer_was_running := false
 
+func _ready() -> void:
+	for stats: UnitStats in enemy_collection:
+		Global.ensure_stats_baseline(stats)
+		if wave_index == 1:
+			Global.apply_enemy_wave_scaling(stats, wave_index)
+
 
 func find_wave_data() -> WaveData:
 	for wave: WaveData in waves_data:
@@ -27,6 +33,8 @@ func find_wave_data() -> WaveData:
 	return null
 
 func start_wave() -> void:
+	for stats: UnitStats in enemy_collection:
+		Global.apply_enemy_wave_scaling(stats, wave_index)
 	current_wave_data = find_wave_data()
 	if not current_wave_data:
 		printerr("No valid wave.")
@@ -77,6 +85,7 @@ func spawn_enemy() -> void:
 		spawn_effect.queue_free()
 		
 		var instance := enemy_scene.instantiate() as Enemy
+		Global.apply_enemy_wave_scaling(instance.stats, wave_index)
 		instance.global_position = spawn_pos
 		get_parent().add_child(instance)
 		spawned_enemies.append(instance)
@@ -94,9 +103,9 @@ func clear_enemies() -> void:
 
 
 func update_enemies_new_wave() -> void:
+	var next_wave := wave_index + 1
 	for stats: UnitStats in enemy_collection:
-		stats.health += stats.health_increase_per_wave
-		stats.damage += stats.damage_increase_per_wave
+		Global.apply_enemy_wave_scaling(stats, next_wave)
 
 
 func get_wave_timer_text() -> String:

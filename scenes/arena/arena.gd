@@ -34,6 +34,7 @@ func _ready() -> void:
 			
 			var player_scene = Global.available_players[ProgressData.current_player_name]
 			Global.player = player_scene.instantiate()
+			Global.ensure_stats_baseline(Global.player.stats)
 			add_child(Global.player)
 			
 			for stat_name in ProgressData.player_stats:
@@ -88,8 +89,10 @@ func start_new_wave() -> void:
 	manual_pause_active = false
 	pause_menu.visible = false
 	Global.game_paused = false
-	Global.player.update_player_for_new_wave()
-	spawner.wave_index += 1
+	var next_wave := spawner.wave_index + 1
+	if Global.player:
+		Global.player.update_player_for_new_wave(next_wave)
+	spawner.wave_index = next_wave
 	spawner.start_wave()
 
 

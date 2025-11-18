@@ -83,8 +83,8 @@ func update_rotation() -> void:
 	elif move_dir.x < 0:
 		visuals.scale = Vector2(0.5, 0.5)
 
-func update_player_for_new_wave() -> void:
-	stats.health += stats.health_increase_per_wave
+func update_player_for_new_wave(wave_index: int) -> void:
+	stats.health = Global.get_player_health_for_wave(stats, wave_index)
 	health_component.setup(stats)
 
 
